@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Circle Dodge Game</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
@@ -27,11 +27,16 @@
 
 <div class="overlay" id="start" style="display:flex">
 <h1>CIRCLE DODGE</h1>
-<p>Your cyan circle = you. Dodge red, pink &amp; orange ones!</p>
+<p class="tagline">Your cyan circle = you. Dodge red, pink &amp; orange ones!</p>
 <p style="color:#fbbf24">Collect green (+1) &amp; gold (+5). Every 5 points = next level!</p>
-<p style="color:#38bdf8">POWER-UPS: Shield, Slow-Mo, Magnet &amp; extra Life. Chain pickups for combo bonus x5!</p>
+<div class="modes">
+<button class="mode-btn easy" onclick="startGame('easy')"><span class="m-name">&#128522; EASY</span><span class="m-desc">Kick back &amp; dodge</span></button>
+<button class="mode-btn hard" onclick="startGame('hard')"><span class="m-name">&#128293; HARD</span><span class="m-desc">The real deal</span></button>
+<button class="mode-btn extreme" onclick="startGame('extreme')"><span class="m-name">&#9889; EXTREME</span><span class="m-desc">Balls everywhere</span></button>
+</div>
+<button class="mode-btn insane" onclick="startGame('insane')"><span class="m-name">&#128128; INSANE</span><span class="m-desc">Only for legends - ball rain non-stop</span></button>
+<p style="color:#38bdf8">POWER-UPS: Shield, Slow-Mo, Magnet &amp; extra Life. Chain pickups for combo x5!</p>
 <p style="color:#94a3b8">Press P anytime to pause</p>
-<button onclick="startGame()">START GAME</button>
 </div>
 
 <div class="overlay" id="gameOver">
@@ -42,6 +47,6 @@
 <button onclick="resetGame()">PLAY AGAIN</button>
 </div>
 
-<script src="script.js?v=4"></script>
+<script src="script.js?v=5"></script>
 </body>
 </html>
