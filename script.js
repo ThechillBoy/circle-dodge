@@ -3,6 +3,7 @@ const ctx=canvas.getContext('2d');
 const scoreEl=document.getElementById('score');
 const levelEl=document.getElementById('level');
 const highScoreEl=document.getElementById('highscore');
+const livesEl=document.getElementById('lives');
 const bannerEl=document.getElementById('banner');
 const startOverlay=document.getElementById('start');
 const gameOverEl=document.getElementById('gameOver');
@@ -18,16 +19,20 @@ const playerRadius=22;
 let score=0;
 let highScore=localStorage.getItem('circleGameHighScore')||0;
 let gameActive=false;
+let paused=false;
 
 let enemies=[];
 let collectibles=[];
 let particles=[];
 let popups=[];
+let trail=[];
 
 let enemyTimer=0,collectibleTimer=0;
 let level=1;
 let invincible=0; // frames of shield
 let slowTimer=0;   // frames of slow-mo
+let magnetTimer=0; // frames of magnet
+let lives=0;       // extra lives from heart pickups
 let shake=0;
 let combo=1,comboTimer=0;
 let animationId;
@@ -81,8 +86,7 @@ mstep++;
 
 function sfx(fn){
 if(!audioCtx||!soundOn)return;
-const t=audioCtx.currentTime;
-fn(t);
+fn(audioCtx.currentTime);
 }
 const sfxCollect=()=>sfx(t=>toneAt(500+Math.min(combo,5)*70,t,0.12,'triangle',0.14));
 const sfxGold=()=>sfx(t=>toneAt(880,t,0.15,'square',0.12,1320));
@@ -115,6 +119,12 @@ window.addEventListener('touchmove',function(e){
 mouse.x=e.touches[0].clientX;
 mouse.y=e.touches[0].clientY;
 },{passive:false});
+
+window.addEventListener('keydown',function(e){
+if(!gameActive)return;
+const k=e.key.toLowerCase();
+if(k==='p'||k==='escape'){paused=!paused;showBanner(paused?'PAUSED':'GO!');}
+});
 
 class Enemy{
 constructor(type){
@@ -160,16 +170,29 @@ this.type=type;
 this.radius=type==='gold'?10:9;
 this.x=Math.random()*(width-this.radius*2)+this.radius;
 this.y=-this.radius;
-this.speed=type==='gold'?2.5+Math.random():type==='shield'||type==='slow'?1.8:1.5+Math.random()*2.5;
-this.color=type==='gold'?'#fbbf24':type==='shield'?'#38bdf8':type==='slow'?'#a855f7':'#22c55e';
+this.speed=2;
+this.color=type==='gold'?'#fbbf24':type==='shield'?'#38bdf8':type==='slow'?'#a855f7':type==='magnet'?'#818cf8':type==='life'?'#f43f5e':'#22c55e';
 }
-update(){this.y+=this.speed*(slowTimer>0?0.45:1);}
+update(player){
+if(magnetTimer>0&&player){
+const dx=player.x-this.x,dy=player.y-this.y,d=Math.sqrt(dx*dx+dy*dy);
+if(d>1&&d<280){this.x+=dx/d*4;this.y+=dy/d*4;}
+}
+this.y+=this.speed*(slowTimer>0?0.45:1);
+}
 draw(){
 ctx.beginPath();
 ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
 ctx.fillStyle=this.color;
 ctx.fill();
-if(this.type!=='green'){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}
+if(this.type!=='green'){
+ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+if(this.type==='life'){ // little white cross = extra life
+ctx.strokeStyle='#fff';ctx.beginPath();
+ctx.moveTo(this.x,this.y-4);ctx.lineTo(this.x,this.y+4);
+ctx.moveTo(this.x-4,this.y);ctx.lineTo(this.x+4,this.y);ctx.stroke();
+}
+}
 ctx.closePath();
 }
 }
@@ -244,6 +267,14 @@ clearTimeout(bannerTimeout);
 bannerTimeout=setTimeout(()=>bannerEl.classList.remove('show'),1100);
 }
 
+function drawProgressBar(){
+const w=220,x=(width-w)/2,y=12,pct=(score%5)/5;
+ctx.fillStyle='rgba(255,255,255,0.1)';
+ctx.fillRect(x,y,w,10);
+ctx.fillStyle='#fbbf24';
+ctx.fillRect(x,y,w*pct,10);
+}
+
 function checkLevel(){
 const nl=1+Math.floor(score/5);
 if(nl>level){
@@ -260,17 +291,22 @@ score=0;
 level=1;
 invincible=0;
 slowTimer=0;
+magnetTimer=0;
 shake=0;
 combo=1;
 comboTimer=0;
+lives=0;
+paused=false;
 enemies=[];
 collectibles=[];
 particles=[];
 popups=[];
+trail=[];
 enemyTimer=0;
 collectibleTimer=0;
 scoreEl.textContent='Score: 0';
 levelEl.textContent='Level: 1';
+livesEl.textContent='Lives: 0';
 newBestEl.style.display='none';
 gameActive=true;
 gameOverEl.style.display='none';
@@ -279,9 +315,10 @@ cancelAnimationFrame(animationId);
 animate();
 }
 
-function gameOver(){
-gameActive=false;
+function die(){
 shake=25;
+gameActive=false;
+comboTimer=0;
 const isBest=score>highScore;
 if(isBest){
 highScore=score;
@@ -293,6 +330,20 @@ bestScoreEl.textContent='Best: '+highScore;
 newBestEl.style.display=isBest&&score>0?'block':'none';
 sfxDeath();
 gameOverEl.style.display='flex';
+}
+
+function hitPlayer(){
+if(lives>0){ // extra life saves you from one crash
+lives--;
+livesEl.textContent='Lives: '+lives;
+invincible=150;
+createParticles(mouse.x,mouse.y,'#f43f5e',20);
+popups.push(new Popup(mouse.x,mouse.y-30,'LIFE USED!','#f43f5e'));
+sfxPower();
+return;
+}
+createParticles(mouse.x,mouse.y,'#22d3ee',16);
+die();
 }
 
 function startGame(){
@@ -316,6 +367,17 @@ animationId=requestAnimationFrame(animate);
 return;
 }
 
+if(paused){
+ctx.fillStyle=bgFor();
+ctx.fillRect(0,0,width,height);
+ctx.fillStyle='#fbbf24';
+ctx.font='bold 40px Arial';
+ctx.textAlign='center';
+ctx.fillText('PAUSED - press P to resume',width/2,height/2);
+animationId=requestAnimationFrame(animate);
+return;
+}
+
 ctx.fillStyle=bgFor();
 ctx.fillRect(0,0,width,height);
 
@@ -325,6 +387,7 @@ slowTimer--;
 ctx.fillStyle='rgba(168,85,247,0.08)';
 ctx.fillRect(0,0,width,height); // purple slow-mo tint
 }
+if(magnetTimer>0)magnetTimer--;
 if(comboTimer>0){comboTimer--;}else{combo=1;}
 
 enemyTimer++;
@@ -340,13 +403,30 @@ collectibleTimer++;
 if(collectibleTimer>=collectibleInterval()){
 collectibleTimer=0;
 let type='green';
-const r=Math.random();
+const r=Math.random(),s=Math.random();
 if(level>=4&&r<0.12)type='gold';
-else if(level>=2&&r<0.1)type=r<0.05?'shield':'slow';
+else if(level>=2){
+if(s<0.05)type='shield';
+else if(s<0.10)type='slow';
+else if(s<0.14)type='magnet';
+else if(s<0.16)type='life'; // rare extra life
+}
 collectibles.push(new Collectible(type));
 }
 
 const player={x:mouse.x,y:mouse.y,radius:playerRadius};
+
+// player glow trail
+trail.push({x:mouse.x,y:mouse.y});
+if(trail.length>12)trail.shift();
+for(let i=0;i<trail.length;i++){
+ctx.globalAlpha=(i/trail.length)*0.2;
+ctx.fillStyle='#22d3ee';
+ctx.beginPath();
+ctx.arc(trail[i].x,trail[i].y,playerRadius*(0.4+i/trail.length*0.6),0,Math.PI*2);
+ctx.fill();
+}
+ctx.globalAlpha=1;
 
 // player blinks while shielded
 if(invincible%10<5)ctx.globalAlpha=0.35;
@@ -366,9 +446,13 @@ e.update();
 e.draw();
 
 if(invincible<=0&&checkCollision(player,e)){
+if(lives>0){
+hitPlayer();
+}else{
 createParticles(mouse.x,mouse.y,'#22d3ee',16);
-gameOver();
+die();
 return;
+}
 }
 
 if(e.y-e.radius>height)enemies.splice(i,1);
@@ -376,7 +460,7 @@ if(e.y-e.radius>height)enemies.splice(i,1);
 
 for(let i=collectibles.length-1;i>=0;i--){
 const c=collectibles[i];
-c.update();
+c.update(player);
 c.draw();
 
 if(checkCollision(player,c)){
@@ -391,6 +475,17 @@ slowTimer=300;
 showBanner('SLOW-MO!');
 sfxPower();
 createParticles(c.x,c.y,c.color,8);
+}else if(c.type==='magnet'){
+magnetTimer=300;
+showBanner('MAGNET!');
+sfxPower();
+createParticles(c.x,c.y,c.color,8);
+}else if(c.type==='life'){
+lives++;
+livesEl.textContent='Lives: '+lives;
+popups.push(new Popup(c.x,c.y,'+1 LIFE',c.color));
+sfxGold();
+createParticles(c.x,c.y,c.color,10);
 }else{
 const base=c.type==='gold'?5:1;
 const mult=Math.min(combo,5);
@@ -411,6 +506,7 @@ collectibles.splice(i,1);
 
 stepList(particles);
 stepList(popups);
+drawProgressBar();
 
 animationId=requestAnimationFrame(animate);
 }
