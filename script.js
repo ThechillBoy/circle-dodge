@@ -380,6 +380,16 @@ startOverlay.style.display='none';
 resetGame();
 }
 
+function goMenu(){ // menu button: bina refresh ke wapas mode selection
+gameActive=false;
+paused=false;
+cancelAnimationFrame(animationId);
+enemies=[];collectibles=[];particles=[];popups=[];trail=[];
+shake=0;flash=0;slowTimer=0;magnetTimer=0;combo=1;
+gameOverEl.style.display='none';
+startOverlay.style.display='flex';
+}
+
 function animate(){
 if(!gameActive){
 // death scene: screen shake + keep particles burning until they fade out
