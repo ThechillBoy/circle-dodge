@@ -1,0 +1,15 @@
+* {margin:0;padding:0;box-sizing:border-box}
+body{background:#0f172a;color:#fff;font-family:Arial,sans-serif;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh}
+canvas{display:block;cursor:none;background:#0f172a}
+.ui{position:absolute;top:20px;left:20px;pointer-events:none}
+#score{font-size:24px;font-weight:bold;color:#ef4444;text-shadow:0 0 10px rgba(239,68,68,0.6)}
+#level{font-size:18px;font-weight:bold;color:#fbbf24;margin-top:4px;text-shadow:0 0 10px rgba(251,191,36,0.5)}
+#highscore{font-size:16px;color:#94a3b8;margin-top:4px}
+.banner{position:absolute;top:32%;left:0;right:0;text-align:center;font-size:46px;font-weight:bold;color:#fbbf24;opacity:0;pointer-events:none;text-shadow:0 0 25px rgba(251,191,36,0.8);transition:opacity .4s;z-index:5}
+.banner.show{opacity:1}
+.overlay{position:absolute;inset:0;background:rgba(15,23,42,0.9);display:none;flex-direction:column;justify-content:center;align-items:center;text-align:center;z-index:10;cursor:default}
+.overlay h1{font-size:48px;margin-bottom:10px;color:#ef4444}
+.overlay p{font-size:20px;margin-bottom:10px}
+.final-score{font-size:32px;color:#22c55e;margin-bottom:20px}
+button{padding:12px 24px;font-size:18px;background:#ef4444;color:#fff;border:none;border-radius:8px;cursor:pointer;box-shadow:0 0 15px rgba(239,68,68,0.5);transition:transform 0.1s,background 0.2s}
+button:hover{transform:scale(1.05);background:#dc2626}

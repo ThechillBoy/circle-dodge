@@ -1,0 +1,292 @@
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+const scoreEl=document.getElementById('score');
+const levelEl=document.getElementById('level');
+const highScoreEl=document.getElementById('highscore');
+const bannerEl=document.getElementById('banner');
+const startOverlay=document.getElementById('start');
+const gameOverEl=document.getElementById('gameOver');
+const finalScoreEl=document.getElementById('finalScore');
+const bestScoreEl=document.getElementById('bestScore');
+
+let width,height;
+let mouse={x:0,y:0};
+const playerRadius=22;
+
+let score=0;
+let highScore=localStorage.getItem('circleGameHighScore')||0;
+let gameActive=false;
+
+let enemies=[];
+let collectibles=[];
+let particles=[];
+
+let enemyTimer=0,collectibleTimer=0;
+let level=1;
+let invincible=0; // frames of shield after level up
+let animationId;
+let bannerTimeout=null;
+
+const BG=['#0f172a','#1e1b4b','#134e4a','#312e81','#3b0764','#450a0a'];
+const bgFor=()=>BG[Math.min(level-1,BG.length-1)];
+const enemyInterval=()=>Math.max(18,72-level*5);
+const collectibleInterval=()=>Math.max(40,110-level*5);
+
+highScoreEl.textContent='Best: '+highScore;
+
+function resize(){
+width=canvas.width=window.innerWidth;
+height=canvas.height=window.innerHeight;
+}
+window.addEventListener('resize',resize);
+resize();
+
+window.addEventListener('mousemove',function(e){
+mouse.x=e.clientX;
+mouse.y=e.clientY;
+});
+
+window.addEventListener('touchmove',function(e){
+mouse.x=e.touches[0].clientX;
+mouse.y=e.touches[0].clientY;
+},{passive:false});
+
+class Enemy{
+constructor(type){
+this.type=type;
+const scale=1+(level-1)*0.12; // every level enemies get 12% faster
+this.x=Math.random()*(width-120)+60;
+this.y=-30;
+if(type==='fast'){
+this.radius=9+Math.random()*5;
+this.speed=(4+Math.random()*3)*scale;
+this.color='#f97316';
+}else if(type==='zig'){
+this.radius=11+Math.random()*6;
+this.speed=(2.5+Math.random()*2)*scale;
+this.color='#ec4899';
+this.amp=50+Math.random()*70;
+this.x=Math.min(Math.max(this.x,this.amp),width-this.amp);
+this.baseX=this.x;
+this.phase=Math.random()*Math.PI*2;
+}else{
+this.radius=14+Math.random()*16;
+this.speed=(2+Math.random()*2.5)*scale;
+this.color='#ef4444';
+}
+}
+update(){
+this.y+=this.speed;
+if(this.type==='zig'){this.phase+=0.06;this.x=this.baseX+Math.sin(this.phase)*this.amp;}
+}
+draw(){
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
+ctx.fillStyle=this.color;
+ctx.fill();
+if(this.type==='zig'){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}
+ctx.closePath();
+}
+}
+
+class Collectible{
+constructor(type){
+this.type=type;
+this.radius=type==='gold'?10:7+Math.random()*7;
+this.x=Math.random()*(width-this.radius*2)+this.radius;
+this.y=-this.radius;
+this.speed=type==='gold'?2.5+Math.random():1.5+Math.random()*2.5;
+this.color=type==='gold'?'#fbbf24':'#22c55e';
+}
+update(){this.y+=this.speed;}
+draw(){
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
+ctx.fillStyle=this.color;
+ctx.fill();
+if(this.type==='gold'){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();}
+ctx.closePath();
+}
+}
+
+class Particle{
+constructor(x,y,color){
+this.x=x;
+this.y=y;
+this.color=color;
+this.size=Math.random()*4+2;
+this.speedX=Math.random()*6-3;
+this.speedY=Math.random()*6-3;
+this.life=1.0;
+}
+update(){
+this.x+=this.speedX;
+this.y+=this.speedY;
+this.life-=0.02;
+this.size*=0.95;
+}
+draw(){
+ctx.globalAlpha=this.life;
+ctx.fillStyle=this.color;
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+ctx.fill();
+ctx.globalAlpha=1;
+}
+}
+
+function checkCollision(c1,c2){
+const dx=c1.x-c2.x;
+const dy=c1.y-c2.y;
+const distance=Math.sqrt(dx*dx+dy*dy);
+return distance<c1.radius+c2.radius;
+}
+
+function createParticles(x,y,color,count){
+for(let i=0;i<count;i++){
+particles.push(new Particle(x,y,color));
+}
+}
+
+function stepParticles(){
+for(let i=particles.length-1;i>=0;i--){
+const p=particles[i];
+p.update();
+p.draw();
+if(p.life<=0||p.size<0.5)particles.splice(i,1);
+}
+}
+
+function showBanner(text){
+bannerEl.textContent=text;
+bannerEl.classList.add('show');
+clearTimeout(bannerTimeout);
+bannerTimeout=setTimeout(()=>bannerEl.classList.remove('show'),1100);
+}
+
+function checkLevel(){
+const nl=1+Math.floor(score/5);
+if(nl>level){
+level=nl;
+levelEl.textContent='Level: '+level;
+showBanner('LEVEL '+level+'!');
+invincible=100; // brief shield so a level up never insta-kills
+}
+}
+
+function resetGame(){
+score=0;
+level=1;
+invincible=0;
+enemies=[];
+collectibles=[];
+particles=[];
+enemyTimer=0;
+collectibleTimer=0;
+scoreEl.textContent='Score: 0';
+levelEl.textContent='Level: 1';
+gameActive=true;
+gameOverEl.style.display='none';
+cancelAnimationFrame(animationId);
+animate();
+}
+
+function gameOver(){
+gameActive=false;
+if(score>highScore){
+highScore=score;
+localStorage.setItem('circleGameHighScore',highScore);
+highScoreEl.textContent='Best: '+highScore;
+}
+finalScoreEl.textContent='Score: '+score;
+bestScoreEl.textContent='Best: '+highScore;
+gameOverEl.style.display='flex';
+}
+
+function startGame(){
+startOverlay.style.display='none';
+resetGame();
+}
+
+function animate(){
+if(!gameActive){
+// keep death particles burning until they fade out
+if(particles.length>0){
+ctx.fillStyle=bgFor();
+ctx.fillRect(0,0,width,height);
+stepParticles();
+animationId=requestAnimationFrame(animate);
+}
+return;
+}
+
+ctx.fillStyle=bgFor();
+ctx.fillRect(0,0,width,height);
+
+if(invincible>0)invincible--;
+
+enemyTimer++;
+if(enemyTimer>=enemyInterval()){
+enemyTimer=0;
+let type='normal';
+if(level>=2&&Math.random()<0.25)type='fast';
+if(level>=3&&Math.random()<0.2)type='zig';
+enemies.push(new Enemy(type));
+}
+
+collectibleTimer++;
+if(collectibleTimer>=collectibleInterval()){
+collectibleTimer=0;
+collectibles.push(new Collectible(level>=4&&Math.random()<0.12?'gold':'green'));
+}
+
+const player={x:mouse.x,y:mouse.y,radius:playerRadius};
+
+// player blinks while shielded
+if(invincible%10<5)ctx.globalAlpha=0.35;
+ctx.beginPath();
+ctx.arc(mouse.x,mouse.y,playerRadius,0,Math.PI*2);
+ctx.fillStyle='#22d3ee';
+ctx.fill();
+ctx.strokeStyle='#fff';
+ctx.lineWidth=3;
+ctx.stroke();
+ctx.closePath();
+ctx.globalAlpha=1;
+
+for(let i=enemies.length-1;i>=0;i--){
+const e=enemies[i];
+e.update();
+e.draw();
+
+if(invincible<=0&&checkCollision(player,e)){
+createParticles(mouse.x,mouse.y,'#22d3ee',16);
+gameOver();
+return;
+}
+
+if(e.y-e.radius>height)enemies.splice(i,1);
+}
+
+for(let i=collectibles.length-1;i>=0;i--){
+const c=collectibles[i];
+c.update();
+c.draw();
+
+if(checkCollision(player,c)){
+const pts=c.type==='gold'?5:1;
+score+=pts;
+scoreEl.textContent='Score: '+score;
+createParticles(c.x,c.y,c.color,pts===5?10:6);
+if(pts===5)showBanner('+5 BONUS!');
+collectibles.splice(i,1);
+checkLevel();
+}else if(c.y-c.radius>height){
+collectibles.splice(i,1);
+}
+}
+
+stepParticles();
+
+animationId=requestAnimationFrame(animate);
+}

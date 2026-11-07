@@ -1,6 +1,6 @@
 # ⭕ Circle Dodge
 
-Endless mouse-dodge arcade game in pure vanilla HTML/CSS/JS — **single file, zero dependencies**.
+Endless mouse-dodge arcade game in pure vanilla HTML/CSS/JS — **zero dependencies**.
 
 **Play:** https://thechillboy.github.io/circle-dodge
 
@@ -12,3 +12,9 @@ Endless mouse-dodge arcade game in pure vanilla HTML/CSS/JS — **single file, z
 - Level 3+ zigzag enemies will hunt you. Good luck 😎
 
 Beat your best score — it's saved locally.
+
+## Files
+- `index.html` — page & UI
+- `style.css` — styling
+- `script.js` — game logic
+- `favicon.svg` — tab icon
