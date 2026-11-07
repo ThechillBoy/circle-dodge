@@ -1,6 +1,6 @@
 # ⭕ Circle Dodge
 
-Endless mouse-dodge arcade game in pure vanilla HTML/CSS/JS — **zero dependencies**.
+Endless mouse-dodge arcade game in pure vanilla HTML/CSS/JS — **zero dependencies, no assets** (all sound is synthesized with WebAudio).
 
 **Play:** https://thechillboy.github.io/circle-dodge
 
@@ -11,10 +11,15 @@ Endless mouse-dodge arcade game in pure vanilla HTML/CSS/JS — **zero dependenc
 - Every **5 points = next level**: enemies get faster and fiercer
 - Level 3+ zigzag enemies will hunt you. Good luck 😎
 
-Beat your best score — it's saved locally.
+## Features
+- **Combo system** — chain pickups quickly for up to x5 score multiplier
+- **Power-ups** — 🛡 Shield (5s invincible) and 💜 Slow-Mo (5s)
+- **Synthesized sound effects** & **procedural background music** (tempo rises with level)
+- Screen shake on death, floating score popups, level-up banners
+- Best-score saved locally
 
 ## Files
 - `index.html` — page & UI
 - `style.css` — styling
-- `script.js` — game logic
+- `script.js` — game logic + audio engine
 - `favicon.svg` — tab icon
