@@ -13,14 +13,15 @@ Endless mouse-dodge arcade game in pure vanilla HTML/CSS/JS - zero dependencies,
 - Every **5 points = next level**: enemies get faster and fiercer
 - Level 3+ zigzag enemies will hunt you. Good luck!
 
-## Difficulty tiers
-| Level | Tier | What happens |
-|---|---|---|
-| 5+ | **HARD** | 25% faster enemies, tighter spawn rate |
-| 7+ | **EXTREME** | 50% faster, spawns even quicker |
-| 9+ | **INSANE** | 80% faster, maximum pressure |
+## Game modes (picked on the landing screen)
+| Mode | Speed | Balls per wave | Spawns |
+|---|---|---|---|
+| 😊 **EASY** | 25% slower | starts at 1, +1 every 3 levels (max 4) | relaxed |
+| 🔥 **HARD** | baseline | starts at 1, +1 every 2 levels (max 5) | normal |
+| ⚡ **EXTREME** | 35% faster | starts at 2, +1 every 2 levels (max 5) | faster |
+| 💀 **INSANE** | 80% faster | starts at 3 (max 6) | fastest |
 
-Red balls multiply every level: 1 per wave at first, then 2, 3, 4... up to **5 per wave** at level 9+. Higher levels also roll more fast/zigzag enemies.
+The mode never changes by itself - you tap it on the landing screen and it stays for the whole run. Higher levels still roll more fast/zigzag enemies in every mode.
 
 ## Features
 - **Combo system** - chain pickups quickly for up to x5 score multiplier
