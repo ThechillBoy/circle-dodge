@@ -3,14 +3,14 @@ const ctx=canvas.getContext('2d');
 const scoreEl=document.getElementById('score');
 const levelEl=document.getElementById('level');
 const highScoreEl=document.getElementById('highscore');
-const livesEl=document.getElementById('lives');
+const livesEl=document.getElementById('lives')||{textContent:''}; // stub = old cached HTML safety
 const bannerEl=document.getElementById('banner');
 const startOverlay=document.getElementById('start');
 const gameOverEl=document.getElementById('gameOver');
 const finalScoreEl=document.getElementById('finalScore');
 const bestScoreEl=document.getElementById('bestScore');
-const newBestEl=document.getElementById('newBest');
-const soundBtn=document.getElementById('soundBtn');
+const newBestEl=document.getElementById('newBest')||{style:{}};
+const soundBtn=document.getElementById('soundBtn')||{textContent:''};
 
 let width,height;
 let mouse={x:0,y:0};
@@ -34,13 +34,16 @@ let slowTimer=0;   // frames of slow-mo
 let magnetTimer=0; // frames of magnet
 let lives=0;       // extra lives from heart pickups
 let shake=0;
+let flash=0;
 let combo=1,comboTimer=0;
 let animationId;
 let bannerTimeout=null;
 
 const BG=['#0f172a','#1e1b4b','#134e4a','#312e81','#3b0764','#450a0a'];
 const bgFor=()=>BG[Math.min(level-1,BG.length-1)];
-const enemyInterval=()=>Math.max(18,72-level*5);
+const tierOf=l=>l>8?'INSANE':l>6?'EXTREME':l>4?'HARD':''; // level-4 ke baad hard, 6 ke baad extreme, 8 ke baad insane
+const tierSpeed=t=>t==='INSANE'?1.8:t==='EXTREME'?1.5:t==='HARD'?1.25:1;
+const enemyInterval=()=>Math.max(14,72-level*5-(level>4?4:0)-(level>6?4:0)-(level>8?3:0));
 const collectibleInterval=()=>Math.max(40,110-level*5);
 
 // ===== Audio (WebAudio, no files) =====
@@ -48,6 +51,15 @@ let audioCtx=null,masterGain=null,soundOn=true;
 const MELODY=[220,0,261.6,0,329.6,0,261.6,0, 220,0,196,0,246.9,0,196,0];
 const BASS=[110,110,130.8,98];
 let mstep=0,nextNote=0;
+let hatBuf=null;
+function hatAt(t,vol){ // short white-noise hi-hat tick
+if(!hatBuf){hatBuf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.05,audioCtx.sampleRate);const d=hatBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
+const s=audioCtx.createBufferSource(),g=audioCtx.createGain();
+s.buffer=hatBuf;
+g.gain.setValueAtTime(vol,t);
+g.gain.exponentialRampToValueAtTime(0.001,t+0.03);
+s.connect(g);g.connect(masterGain);s.start(t);s.stop(t+0.03);
+}
 
 function initAudio(){ // must be called from a user click (browser autoplay rules)
 if(audioCtx){if(audioCtx.state==='suspended')audioCtx.resume();return;}
@@ -78,6 +90,7 @@ const stepDur=Math.max(0.14,0.26-(level-1)*0.008); // level up = faster tempo
 while(nextNote<audioCtx.currentTime+0.25){
 const f=MELODY[mstep%MELODY.length];
 if(f)toneAt(f,nextNote,stepDur*0.9,'triangle',0.05);
+if(mstep%2===1)hatAt(nextNote,0.04);
 if(mstep%4===0)toneAt(BASS[(mstep/4)%BASS.length],nextNote,stepDur*3.5,'sine',0.09);
 nextNote+=stepDur;
 mstep++;
@@ -129,7 +142,7 @@ if(k==='p'||k==='escape'){paused=!paused;showBanner(paused?'PAUSED':'GO!');}
 class Enemy{
 constructor(type){
 this.type=type;
-const scale=1+(level-1)*0.12; // every level enemies get 12% faster
+const scale=(1+(level-1)*0.12)*tierSpeed(tierOf(level)); // per-level + tier speed
 this.x=Math.random()*(width-120)+60;
 this.y=-30;
 if(type==='fast'){
@@ -279,8 +292,8 @@ function checkLevel(){
 const nl=1+Math.floor(score/5);
 if(nl>level){
 level=nl;
-levelEl.textContent='Level: '+level;
-showBanner('LEVEL '+level+'!');
+levelEl.textContent=level>4?'Level: '+level+' ('+tierOf(level)+')':'Level: '+level;
+showBanner(tierOf(level)?tierOf(level)+' MODE!':'LEVEL '+level+'!');
 invincible=Math.max(invincible,100); // brief shield so a level up never insta-kills
 sfxLevel();
 }
@@ -317,6 +330,7 @@ animate();
 
 function die(){
 shake=25;
+flash=8;
 gameActive=false;
 comboTimer=0;
 const isBest=score>highScore;
@@ -362,6 +376,7 @@ ctx.fillStyle=bgFor();
 ctx.fillRect(0,0,width,height);
 stepList(particles);
 ctx.restore();
+if(flash>0){ctx.fillStyle='rgba(239,68,68,'+(flash/12)+')';ctx.fillRect(0,0,width,height);flash--;} // red death flash
 animationId=requestAnimationFrame(animate);
 }
 return;
@@ -393,10 +408,14 @@ if(comboTimer>0){comboTimer--;}else{combo=1;}
 enemyTimer++;
 if(enemyTimer>=enemyInterval()){
 enemyTimer=0;
+// red balls per spawn event rise with level: L1-2:1, L3-4:2, L5-6:3, L7-8:4, L9+:5
+const count=Math.min(5,1+Math.floor((level-1)/2));
+for(let i=0;i<count;i++){
 let type='normal';
-if(level>=2&&Math.random()<0.25)type='fast';
-if(level>=3&&Math.random()<0.2)type='zig';
+if(level>=2&&Math.random()<0.25+level*0.02)type='fast';
+else if(level>=3&&Math.random()<0.2+level*0.025)type='zig'; // higher level = more fast/zig
 enemies.push(new Enemy(type));
+}
 }
 
 collectibleTimer++;
