@@ -49,6 +49,8 @@ extreme:{label:'EXTREME',speed:1.35,wave:l=>Math.min(5,2+Math.floor((l-1)/2)),in
 insane:{label:'INSANE',speed:1.8,wave:l=>Math.min(6,3+Math.floor((l-1)/2)),interval:l=>Math.max(8,46-l*4)}
 };
 let mode='hard';
+// progressive speed after level 8 (mobile-friendly: 1-7 normal, then gradual climb)
+const levelSpeedMul=l=>l<=7?1:1+Math.min(0.6,(l-7)*0.07); // L8:1.07, L9:1.14, L10:1.21... caps at 1.6
 const enemyInterval=()=>MODES[mode].interval(level);
 const collectibleInterval=()=>Math.max(40,110-level*5);
 
@@ -154,7 +156,7 @@ if(k==='p'||k==='escape'){paused=!paused;showBanner(paused?'PAUSED':'GO!');}
 class Enemy{
 constructor(type){
 this.type=type;
-const scale=(1+(level-1)*0.12)*MODES[mode].speed; // per-level growth + chosen mode speed
+const scale=(1+(level-1)*0.12)*MODES[mode].speed*levelSpeedMul(level); // per-level + mode + progressive after L8
 this.x=Math.random()*(width-120)+60;
 this.y=-30;
 if(type==='fast'){
