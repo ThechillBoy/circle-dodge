@@ -41,9 +41,15 @@ let bannerTimeout=null;
 
 const BG=['#0f172a','#1e1b4b','#134e4a','#312e81','#3b0764','#450a0a'];
 const bgFor=()=>BG[Math.min(level-1,BG.length-1)];
-const tierOf=l=>l>8?'INSANE':l>6?'EXTREME':l>4?'HARD':''; // level-4 ke baad hard, 6 ke baad extreme, 8 ke baad insane
-const tierSpeed=t=>t==='INSANE'?1.8:t==='EXTREME'?1.5:t==='HARD'?1.25:1;
-const enemyInterval=()=>Math.max(14,72-level*5-(level>4?4:0)-(level>6?4:0)-(level>8?3:0));
+// mode landing page par tap karke choose hota hai - game kabhi khud se mode nahi badalta
+const MODES={
+easy:{label:'EASY',speed:0.75,wave:l=>Math.min(4,1+Math.floor((l-1)/3)),interval:l=>Math.max(30,84-l*4)},
+hard:{label:'HARD',speed:1,wave:l=>Math.min(5,1+Math.floor((l-1)/2)),interval:l=>Math.max(14,72-l*5)},
+extreme:{label:'EXTREME',speed:1.35,wave:l=>Math.min(5,2+Math.floor((l-1)/2)),interval:l=>Math.max(11,60-l*5)},
+insane:{label:'INSANE',speed:1.8,wave:l=>Math.min(6,3+Math.floor((l-1)/2)),interval:l=>Math.max(8,46-l*4)}
+};
+let mode='hard';
+const enemyInterval=()=>MODES[mode].interval(level);
 const collectibleInterval=()=>Math.max(40,110-level*5);
 
 // ===== Audio (WebAudio, no files) =====
@@ -148,7 +154,7 @@ if(k==='p'||k==='escape'){paused=!paused;showBanner(paused?'PAUSED':'GO!');}
 class Enemy{
 constructor(type){
 this.type=type;
-const scale=(1+(level-1)*0.12)*tierSpeed(tierOf(level)); // per-level + tier speed
+const scale=(1+(level-1)*0.12)*MODES[mode].speed; // per-level growth + chosen mode speed
 this.x=Math.random()*(width-120)+60;
 this.y=-30;
 if(type==='fast'){
@@ -298,8 +304,8 @@ function checkLevel(){
 const nl=1+Math.floor(score/5);
 if(nl>level){
 level=nl;
-levelEl.textContent=level>4?'Level: '+level+' ('+tierOf(level)+')':'Level: '+level;
-showBanner(tierOf(level)?tierOf(level)+' MODE!':'LEVEL '+level+'!');
+levelEl.textContent='Level: '+level+' · '+MODES[mode].label;
+showBanner('LEVEL '+level+'!');
 invincible=Math.max(invincible,100); // brief shield so a level up never insta-kills
 sfxLevel();
 }
@@ -324,8 +330,9 @@ trail=[];
 enemyTimer=0;
 collectibleTimer=0;
 scoreEl.textContent='Score: 0';
-levelEl.textContent='Level: 1';
+levelEl.textContent='Level: 1 · '+MODES[mode].label;
 livesEl.textContent='Lives: 0';
+showBanner(MODES[mode].label+' MODE!');
 newBestEl.style.display='none';
 gameActive=true;
 gameOverEl.style.display='none';
@@ -366,7 +373,8 @@ createParticles(mouse.x,mouse.y,'#22d3ee',16);
 die();
 }
 
-function startGame(){
+function startGame(m){
+if(m)mode=m; // sirf landing ke mode button se set hota hai
 initAudio(); // user click = allowed to start sound
 startOverlay.style.display='none';
 resetGame();
@@ -414,8 +422,7 @@ if(comboTimer>0){comboTimer--;}else{combo=1;}
 enemyTimer++;
 if(enemyTimer>=enemyInterval()){
 enemyTimer=0;
-// red balls per spawn event rise with level: L1-2:1, L3-4:2, L5-6:3, L7-8:4, L9+:5
-const count=Math.min(5,1+Math.floor((level-1)/2));
+const count=MODES[mode].wave(level); // ball pressure = chosen mode ka rule
 for(let i=0;i<count;i++){
 let type='normal';
 if(level>=2&&Math.random()<0.25+level*0.02)type='fast';
