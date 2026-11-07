@@ -1,6 +1,6 @@
 # Circle Dodge
 
-## ðŸŽ® PLAY NOW ðŸ‘‰ https://thechillboy.github.io/circle-dodge
+## 🎮 PLAY NOW 👉 https://thechillboy.github.io/circle-dodge
 
 Repo: https://github.com/ThechillBoy/circle-dodge
 
@@ -12,6 +12,15 @@ Endless mouse-dodge arcade game in pure vanilla HTML/CSS/JS - zero dependencies,
 - **Collect** green (+1) and gold (+5) circles
 - Every **5 points = next level**: enemies get faster and fiercer
 - Level 3+ zigzag enemies will hunt you. Good luck!
+
+## Difficulty tiers
+| Level | Tier | What happens |
+|---|---|---|
+| 5+ | **HARD** | 25% faster enemies, tighter spawn rate |
+| 7+ | **EXTREME** | 50% faster, spawns even quicker |
+| 9+ | **INSANE** | 80% faster, maximum pressure |
+
+Red balls multiply every level: 1 per wave at first, then 2, 3, 4... up to **5 per wave** at level 9+. Higher levels also roll more fast/zigzag enemies.
 
 ## Features
 - **Combo system** - chain pickups quickly for up to x5 score multiplier
