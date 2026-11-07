@@ -129,9 +129,15 @@ mouse.y=e.clientY;
 });
 
 window.addEventListener('touchmove',function(e){
+e.preventDefault(); // stop page scroll/bounce on mobile
 mouse.x=e.touches[0].clientX;
 mouse.y=e.touches[0].clientY;
 },{passive:false});
+
+window.addEventListener('touchstart',function(e){ // first tap par bhi player jump kare
+mouse.x=e.touches[0].clientX;
+mouse.y=e.touches[0].clientY;
+},{passive:true});
 
 window.addEventListener('keydown',function(e){
 if(!gameActive)return;
